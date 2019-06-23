@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.linalg import inv
 from matplotlib.pyplot import *
+from scipy.signal import lfilter
 
 #Setando os dados que serao usados
 Samples = 99
@@ -33,23 +34,22 @@ F = np.array([[1,dt],[0,1]])
 #Sendo P a variancia entre os estados, onde sera pesado a relacao entre a medida
 #e a estimativa
 
-sigma_model = 15
 
-P = np.array([[sigma_model**2,0],[0,sigma_model**2]])
+P = np.array([[10**2,0],[0,33**2]])
 
 
 #Sendo Q a covariancia do ruido do preocesso. O que representa a incerteza do modelo
 #Para esse problema sera assumido um modelo perfeito, sem aceleracao
 #Qualquer aceleracao medida sera considerada ruido.
 
-Q = np.array([[0, 0],[0,0]])
+Q = np.array([[0.588, 1.175],[1.175,2.35]])
 
 
 #Sendo R ruido na medicao
 
-sigma_meas = 15
+sigma_meas = 10
 
-R = sigma_meas**2
+R = np.array(sigma_meas**2)
 
 #####IMPLEMENTANDO O FILTRO DE KALMAN########################
 
@@ -58,24 +58,30 @@ R = sigma_meas**2
 Xk_buffer = Xk_prev
 Z_buffer = [0]
 
-#matriz com o os valores medidos na primeira amos tra M(1) = 1
-#como nao se me de velocidade temos que M(2) = 0
-M = np.array([[1, 0]]);
-
+#matriz com o os valores medidos H(1) = 1
+#como nao se me de velocidade temos que H(2) = 0
+H = np.array([[1, 0]]);
+teste = []
 for i in range(0,Samples):
     
     #Z = ValorMedido + Ruido
-    Z = Xreal[i]+sigma_meas*np.random.rand()
+    Z = Xreal[i]+sigma_meas*np.random.randn()
     Z_buffer.append(Z)
     
+    #Predict
+    x = F @ Xk_prev
     P1 = F @ P @ F.transpose() + Q
-    S = M @ P1 @ M.transpose() + R
     
-    K = P1 @ M.transpose() @ inv(S)
     
-    P = P1 - K @ M @ P1
+    #Update
+    y = Z-H @ x
+    teste.append(y)
+    S = H @ P1 @ H.transpose() + R
+    K = P1 @ H.transpose() @ inv(S)
     
-    Xk = F @ Xk_prev + K @ (Z-M @ F @ Xk_prev)
+    P = P1 - K @ H @ P1
+    
+    Xk = x + K @ y
     Xk_buffer = np.append(Xk_buffer,Xk,axis=1)
     
     Xk_prev = Xk
@@ -98,10 +104,14 @@ for position in Z_buffer:
     
 Vreal = VelReal*np.ones(len(tempo))
 
+windowSize = 5
+
+velMedia = lfilter(np.ones(windowSize) / windowSize, 1, velZ)
+
 figure()
-plot(tempo,Vreal,tempo,velZ,tempo,Xk_buffer[1])
+plot(tempo,Vreal,tempo,velZ,tempo,Xk_buffer[1],tempo,velMedia)
 title('Comparação entre os valores da Velocidade Real, Medido e obtido pelo Filtro de Kalman')
 ylabel('Velocidade (m/s)')
 xlabel('Tempo (s)')
-legend(['Velocidade Real','Velocidade Medida','Velocidade Kalman'])
+legend(['Velocidade Real','Velocidade Medida','Velocidade Kalman','Velocidade Média do Sensor'])
         
