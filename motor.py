@@ -17,9 +17,10 @@ dt = 0.01#tempo de discretizacao para o motor real
 #modelo do sistema
 A = np.array([[-R/L,-K/L],[K/J,-b/J]])
 B = np.array([[1/L , 0],[0 ,-1/J]])
-C = np.array([1,0])
+C = np.array([0,1])
+D = np.array([0,0])
 
-sys = StateSpace(A,B,C,[0,0])
+sys = StateSpace(A,B,C,D)
 
 #discretizando o modelo
 dsys = sys.sample(dt)
@@ -52,15 +53,15 @@ Xk_prev = np.array([[0],[0]])
 Xk = []
 
 #Entradas do Sistema
-u = np.array([[16],[0.021]])
+#u = np.array([[16, 0],[0, 0.021]])
+u = np.array([[16 ],[0.0021]])
 
 #Simulando o Sistema
 Xreal = []
 Xreal.append(dsys.A @ Xk_prev + dsys.B@u)
-
+y = []
 for i in range(1,len(tempo)):
     Xreal.append(dsys.A@Xreal[i-1]+dsys.B@u)
-
 
 #####IMPLEMENTANDO O FILTRO DE KALMAN########################
 
